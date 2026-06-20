@@ -255,11 +255,6 @@ export interface ConsoleResult {
   contextIncluded: string[];
   proposedPlan?: TripPlan;
   changeSummary?: string;
-  // Decisions the assistant logged for the signed-in user during this turn
-  // (e.g. "Loved: Hoi An lantern market", "Marked Bangkok as Maybe"). Empty
-  // unless the AI provider is active and Claude used its logging tools.
-  actionsTaken?: string[];
-  source?: "ai" | "mock"; // provenance for the UI
 }
 
 export interface SynthesizeItineraryResult {

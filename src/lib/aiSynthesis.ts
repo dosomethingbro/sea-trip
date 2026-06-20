@@ -9,12 +9,14 @@
 import "server-only";
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import { getModel } from "@/lib/aiClient";
 import type {
   LLMPlanRequest,
   SynthesizeItineraryResult,
   TripPlan,
 } from "@/lib/types";
+
+// Default to the highest-version mini-class model; overridable via env.
+const MODEL = process.env.PLAN_ASSISTANT_MODEL ?? "openai/gpt-5.4-mini";
 
 // ---------------------------------------------------------------------------
 // Zod schema mirroring TripPlan. OpenAI strict mode (default in AI SDK 6)
@@ -215,7 +217,7 @@ export async function synthesizeItinerary(
   req: LLMPlanRequest
 ): Promise<SynthesizeItineraryResult> {
   const { experimental_output } = await generateText({
-    model: getModel(),
+    model: MODEL,
     system:
       "You are a precise travel-planning assistant. Always return a complete, internally consistent itinerary that maximizes the couple's shared interests.",
     prompt: buildPrompt(req),

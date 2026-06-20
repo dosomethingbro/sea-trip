@@ -5,19 +5,13 @@
 //
 // Provider selection:
 //   PLAN_ASSISTANT_PROVIDER unset / "mock"  -> deterministic local engine.
-//   anything else (e.g. "gateway" / "claude") -> real AI (Claude when
-//                                               ANTHROPIC_API_KEY is set) for
-//                                               synthesize-itinerary AND the
-//                                               console, with the deterministic
-//                                               engine as a hard fallback.
+//   anything else (e.g. "gateway")          -> real AI for synthesize-itinerary
+//                                               via the Vercel AI Gateway, with
+//                                               the mock as a hard fallback.
 
 import { NextResponse } from "next/server";
 import { runPlanAssistant, synthesizeItineraryMock } from "@/lib/planAssistant";
 import { synthesizeItinerary } from "@/lib/aiSynthesis";
-import { runConsoleAI } from "@/lib/aiConsole";
-import { usingClaude } from "@/lib/aiClient";
-import { requireProfileId } from "@/lib/membership";
-import { PROFILE_LABELS } from "@/lib/workspaceConfig";
 import type { LLMPlanRequest, LLMPlanResponse } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -34,11 +28,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing request 'type'" }, { status: 400 });
   }
 
-  // Use real AI whenever a provider is available (Claude via ANTHROPIC_API_KEY,
-  // or the AI Gateway). Set PLAN_ASSISTANT_PROVIDER=mock to force the
-  // deterministic engine for offline/testing.
-  const forceMock = process.env.PLAN_ASSISTANT_PROVIDER === "mock";
-  const useAI = !forceMock && (usingClaude() || Boolean(process.env.AI_GATEWAY_API_KEY));
+  const provider = process.env.PLAN_ASSISTANT_PROVIDER ?? "mock";
+  const useAI = provider !== "mock";
 
   try {
     let result: LLMPlanResponse;
@@ -52,20 +43,9 @@ export async function POST(request: Request) {
         console.error("[v0] AI synthesis failed, using fallback:", err);
         result = { type: body.type, synthesize: synthesizeItineraryMock(body) };
       }
-    } else if (body.type === "console" && useAI) {
-      // Claude-powered console. It can LOG decisions for the signed-in user, so
-      // we resolve the session->profile here (never trust the client for it).
-      try {
-        const profileId = await requireProfileId();
-        const displayName = PROFILE_LABELS[profileId] ?? "there";
-        result = { type: "console", console: await runConsoleAI(body, profileId, displayName) };
-      } catch (err) {
-        console.error("[v0] AI console failed, using fallback:", err);
-        result = runPlanAssistant(body);
-      }
     } else {
       // Deterministic local engine — no network, no key required. Also handles
-      // analyze-favorites / revise-plan which stay rule-based.
+      // analyze-favorites / revise-plan / console which stay rule-based.
       result = runPlanAssistant(body);
     }
 

@@ -469,8 +469,6 @@ export function useWorkspace() {
     feedback: state?.feedback ?? {},
     destinationDecisions: state?.destinationDecisions ?? {},
     northStar: state?.northStar,
-    // Revalidate from the server (e.g. after the AI console logs decisions).
-    refresh: () => mutate(),
     // actions
     toggleFavorite,
     setFeedback,

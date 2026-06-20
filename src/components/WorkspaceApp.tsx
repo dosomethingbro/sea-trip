@@ -275,7 +275,6 @@ export function WorkspaceApp({ profile }: { profile: ProfileBarInfo }) {
         feedback={ws.feedback}
         dateOptionId={ws.activeDateOption.id}
         onSaveProposed={saveConsoleProposed}
-        onActionsTaken={ws.refresh}
       />
 
       <AnalyzeFavoritesModal
