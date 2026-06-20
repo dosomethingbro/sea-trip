@@ -12,6 +12,7 @@
 import { NextResponse } from "next/server";
 import { runPlanAssistant, synthesizeItineraryMock } from "@/lib/planAssistant";
 import { synthesizeItinerary } from "@/lib/aiSynthesis";
+import { hasClaudeKey } from "@/lib/aiProvider";
 import type { LLMPlanRequest, LLMPlanResponse } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -28,8 +29,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing request 'type'" }, { status: 400 });
   }
 
-  const provider = process.env.PLAN_ASSISTANT_PROVIDER ?? "mock";
-  const useAI = provider !== "mock";
+  // Use real AI for synthesis whenever a Claude key is configured. The explicit
+  // PLAN_ASSISTANT_PROVIDER="mock" override still forces the deterministic path.
+  const forceMock = process.env.PLAN_ASSISTANT_PROVIDER === "mock";
+  const useAI = !forceMock && hasClaudeKey();
 
   try {
     let result: LLMPlanResponse;

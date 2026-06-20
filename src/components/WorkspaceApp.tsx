@@ -20,6 +20,7 @@ import { PlanDetailModal } from "@/components/PlanDetailModal";
 import { LLMPlanningConsole } from "@/components/LLMPlanningConsole";
 import { AnalyzeFavoritesModal } from "@/components/AnalyzeFavoritesModal";
 import { SynthesisResultModal } from "@/components/SynthesisResultModal";
+import { AssistantPanel } from "@/components/AssistantPanel";
 import { ProfileBar, type ProfileBarInfo } from "@/components/ProfileBar";
 
 type Tab = "library" | "compare" | "hybrid" | "preferences";
@@ -292,6 +293,8 @@ export function WorkspaceApp({ profile }: { profile: ProfileBarInfo }) {
         onClose={() => setSynthOpen(false)}
         onOpenPlan={openSynthPlan}
       />
+
+      <AssistantPanel />
     </main>
   );
 }
