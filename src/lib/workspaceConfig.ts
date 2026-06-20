@@ -9,7 +9,15 @@ import type { ProfileId } from "@/lib/types";
 // as a single workspace for now").
 export const WORKSPACE_ID = "default";
 
-// Until Phase 2 wires real auth + membership, every read/write is attributed to
-// this profile. Phase 2 will replace call sites that use this constant with the
-// session-derived ProfileId.
+// The owner seat. The first account to sign up claims this profile; the partner
+// joins via an invite link that assigns the remaining seat.
 export const DEFAULT_PROFILE_ID: ProfileId = "lucas";
+
+// The two profile seats in the workspace, in claim-priority order.
+export const PROFILE_IDS: ProfileId[] = ["lucas", "girlfriend"];
+
+// Human-friendly labels for each profile seat (used in auth/invite UI).
+export const PROFILE_LABELS: Record<ProfileId, string> = {
+  lucas: "Lucas",
+  girlfriend: "Tobi",
+};

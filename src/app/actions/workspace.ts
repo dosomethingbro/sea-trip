@@ -26,7 +26,7 @@ import {
   setNorthStarRow,
   updatePreferenceRow,
 } from "@/storage/remoteTripStore";
-import { DEFAULT_PROFILE_ID } from "@/lib/workspaceConfig";
+import { requireProfileId } from "@/lib/membership";
 import type {
   DestinationDecisionStatus,
   FeedbackStatus,
@@ -36,9 +36,11 @@ import type {
   WorkspaceState,
 } from "@/lib/types";
 
-// Phase 2 swaps this for: read session -> membership -> ProfileId.
+// Phase 2: the acting profile is derived from the session -> membership row.
+// Throws "Unauthorized" if there is no valid session/membership, which gates
+// every mutation and the workspace read below.
 async function currentProfile(): Promise<ProfileId> {
-  return DEFAULT_PROFILE_ID;
+  return requireProfileId();
 }
 
 export async function getWorkspaceStateAction(): Promise<WorkspaceState> {
