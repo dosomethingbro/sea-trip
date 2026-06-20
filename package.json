@@ -1,0 +1,35 @@
+{
+  "name": "se-asia-trip-planner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-assisted Southeast Asia travel planning workspace — compare plans, leave activity feedback, and iterate with an LLM.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "dependencies": {
+    "better-auth": "^1.6.20",
+    "drizzle-orm": "^0.45.2",
+    "next": "^14.2.35",
+    "pg": "^8.22.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "server-only": "^0.0.1",
+    "swr": "^2.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "20.14.10",
+    "@types/pg": "^8.20.0",
+    "@types/react": "18.3.3",
+    "@types/react-dom": "18.3.0",
+    "autoprefixer": "10.4.19",
+    "postcss": "8.4.39",
+    "tailwindcss": "3.4.6",
+    "typescript": "5.5.3"
+  }
+}

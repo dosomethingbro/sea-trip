@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+@layer base {
+  body {
+    background-image:
+      radial-gradient(circle at 12% -10%, rgba(201, 162, 39, 0.08), transparent 40%),
+      radial-gradient(circle at 95% 0%, rgba(181, 83, 42, 0.06), transparent 35%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight text-forest;
+  }
+
+  ::selection {
+    background: rgba(201, 162, 39, 0.3);
+  }
+}
+
+@layer components {
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors;
+  }
+  .chip-idle {
+    @apply border-forest/15 bg-white/60 text-muted hover:border-forest/40 hover:text-forest;
+  }
+  .chip-active {
+    @apply border-forest bg-forest text-cream;
+  }
+
+  .card {
+    @apply rounded-2xl border border-forest/10 bg-cream-50 shadow-card transition-shadow;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-forest text-cream hover:bg-forest-700 shadow-card;
+  }
+  .btn-secondary {
+    @apply border border-forest/20 bg-white/70 text-forest hover:border-forest/50;
+  }
+  .btn-clay {
+    @apply bg-clay text-cream hover:bg-clay-600 shadow-card;
+  }
+  .btn-ghost {
+    @apply text-muted hover:bg-forest/5 hover:text-forest;
+  }
+
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.18em] text-clay;
+  }
+}
+
+/* Respect reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Subtle scrollbar in the planning console / drawers. */
+.thin-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: rgba(39, 66, 51, 0.2);
+  border-radius: 999px;
+}
