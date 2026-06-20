@@ -13,7 +13,7 @@ import { useSWRConfig } from "swr";
 const SUGGESTIONS = [
   "Compare my favorited plans for overlap with Tobi.",
   "I love the street-food day in Hanoi — log it.",
-  "Mark Bangkok as maybe for me.",
+  "Build a new plan from everything we've favorited so far.",
 ];
 
 function toolLabel(name: string, output: unknown): string | null {
@@ -26,6 +26,8 @@ function toolLabel(name: string, output: unknown): string | null {
       return `Logged destination decision: ${String(o.status)}`;
     case "toggleFavorite":
       return o.favorite ? "Added plan to favorites" : "Removed plan from favorites";
+    case "createTravelPlan":
+      return `Created new plan: "${String(o.title)}" (${String(o.days)} days) — added to your library`;
     default:
       return "Updated workspace";
   }

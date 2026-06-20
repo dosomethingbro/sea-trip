@@ -12,12 +12,15 @@ import { claudeModel, hasClaudeKey } from "@/lib/aiProvider";
 import { requireProfileId } from "@/lib/membership";
 import { PROFILE_LABELS } from "@/lib/workspaceConfig";
 import { buildAssistantContext } from "@/lib/assistantContext";
+import { planDraftSchema, buildPlanFromDraft } from "@/lib/planDraft";
 import {
   setFeedbackRow,
   setFavoriteRow,
   setDestinationDecisionRow,
+  insertVersionRow,
 } from "@/storage/remoteTripStore";
 import type { UIMessage } from "ai";
+import type { PlanVersion } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -29,10 +32,16 @@ Decision vocabularies (use the exact values):
 - Activities: "love" | "keep" | "defer" | "drop".
 - Destinations: "love" | "like" | "maybe" | "skip".
 
+Creating plans:
+- When the user asks you to build / draft / create a NEW travel plan (a "travel card") from your discussion and their logged feedback, call createTravelPlan.
+- Build the itinerary EXPERIENCES-FIRST: lead with the activities both partners favored (love/keep), then arrange destinations around them. Honor their drops.
+- Keep it realistic: ~3 activities per day, minimal airport-hopping, sensible transfer burden. Estimate the 0-10 scores honestly (lucasFit/girlfriendFit reflect each partner's interests).
+- After creating, confirm the plan title in plain language and tell them it was added to their plan library as a new card.
+
 Rules:
 - Lead with matrix-style comparisons and concise tradeoffs before logging anything.
-- Only call a tool when the user clearly wants to record a decision or favorite. Confirm what you logged in plain language afterward.
-- Use ONLY the activityId / destinationId / lineageId values from the catalog below. Never invent ids.
+- Only call a tool when the user clearly wants to record a decision, favorite, or create a plan. Confirm what you did in plain language afterward.
+- For feedback/favorites, use ONLY the activityId / destinationId / lineageId values from the catalog below. Never invent ids. (createTravelPlan is exempt — it makes a brand-new plan.)
 - Optimize for OVERLAP between the two partners; favor experiences over destinations.
 - Be concise. Avoid over-scheduling and airport-hopping in any advice.`;
 
@@ -109,6 +118,42 @@ export async function POST(request: Request) {
           }
           await setFavoriteRow(profileId, lineageId, favorite);
           return { ok: true, lineageId, favorite };
+        },
+      }),
+
+      createTravelPlan: tool({
+        description:
+          "Create a BRAND-NEW travel plan (a new card / lineage) from the conversation and the couple's logged feedback. Build the full day-by-day itinerary, experiences first. Use this when the user asks you to draft or build a new plan.",
+        inputSchema: planDraftSchema,
+        execute: async (draft) => {
+          try {
+            const plan = buildPlanFromDraft(draft);
+            const lineageId = `lineage-${Date.now().toString(36)}-${Math.random()
+              .toString(36)
+              .slice(2, 7)}`;
+            const version: PlanVersion = {
+              id: `ver-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+              lineageId,
+              label: "Claude Draft",
+              kind: "ai-revision",
+              createdAt: new Date().toISOString(),
+              plan: { ...plan, id: lineageId },
+              changeSummary: draft.rationale.slice(0, 140),
+            };
+            await insertVersionRow(version);
+            return {
+              ok: true,
+              lineageId,
+              title: plan.title,
+              days: plan.days.length,
+              route: plan.route,
+            };
+          } catch (err) {
+            return {
+              ok: false,
+              error: err instanceof Error ? err.message : "Failed to create plan.",
+            };
+          }
         },
       }),
     },
