@@ -44,7 +44,11 @@ export type LogisticsDifficulty = "easy" | "moderate" | "involved";
 
 export type VersionKind = "original" | "ai-revision" | "hybrid" | "custom";
 
-export type LLMRequestType = "analyze-favorites" | "revise-plan" | "console";
+export type LLMRequestType =
+  | "analyze-favorites"
+  | "revise-plan"
+  | "console"
+  | "synthesize-itinerary";
 
 // ---------------------------------------------------------------------------
 // Trip building blocks
@@ -185,6 +189,15 @@ export interface HybridPlanSelection {
 // LLM contract
 // ---------------------------------------------------------------------------
 
+// One partner's decision footprint, used to synthesize a couples itinerary
+// that optimizes for OVERLAP (Constitution: design FOR Lucas and Tobi).
+export interface ProfileFeedbackBundle {
+  profileId: ProfileId;
+  displayName: string;
+  favoritePlans: TripPlan[]; // plans this profile starred
+  feedback: Record<string, ActivityFeedback>; // activityId -> this profile's feedback
+}
+
 export interface LLMPlanRequest {
   type: LLMRequestType;
   prompt?: string; // freeform console input
@@ -194,6 +207,8 @@ export interface LLMPlanRequest {
   feedback?: Record<string, ActivityFeedback>; // activityId -> feedback
   preferences?: Preference[];
   constraints?: string[];
+  // For "synthesize-itinerary": both partners' favorites + feedback.
+  couplesFeedback?: ProfileFeedbackBundle[];
 }
 
 export interface Recommendation {
@@ -242,11 +257,20 @@ export interface ConsoleResult {
   changeSummary?: string;
 }
 
+export interface SynthesizeItineraryResult {
+  proposedPlan: TripPlan; // full, editable plan with days — saved as a PlanVersion
+  rationale: string; // why this itinerary serves both partners
+  overlapHighlights: string[]; // experiences both partners independently favored
+  tradeoffs: string[]; // where one partner compromised, and why it's worth it
+  source: "ai" | "fallback"; // provenance for the UI
+}
+
 export interface LLMPlanResponse {
   type: LLMRequestType;
   analyze?: AnalyzeFavoritesResult;
   revision?: RevisedPlanResult;
   console?: ConsoleResult;
+  synthesize?: SynthesizeItineraryResult;
 }
 
 // ---------------------------------------------------------------------------

@@ -17,6 +17,7 @@ import type {
   Recommendation,
   RevisedPlanResult,
   ScoreChange,
+  SynthesizeItineraryResult,
   TripPlan,
 } from "./types";
 
@@ -521,6 +522,70 @@ function runConsole(req: LLMPlanRequest): ConsoleResult {
 }
 
 // ---------------------------------------------------------------------------
+// Synthesize itinerary (deterministic fallback when the AI provider is off or
+// the model call fails). Picks the favorite that best balances both partners'
+// fit, then annotates the overlap between their starred plans.
+// ---------------------------------------------------------------------------
+
+export function synthesizeItineraryMock(req: LLMPlanRequest): SynthesizeItineraryResult {
+  const bundles = req.couplesFeedback ?? [];
+  // Pool every favorited plan from both partners.
+  const allFavs = bundles.flatMap((b) => b.favoritePlans);
+  const pool = allFavs.length ? allFavs : req.favoritePlans ?? [];
+
+  if (pool.length === 0) {
+    throw new Error("synthesize-itinerary requires at least one favorited plan");
+  }
+
+  // Best compromise: smallest fit gap, then highest overall.
+  const base = [...pool].sort(
+    (a, b) => fitGap(a) - fitGap(b) || overall(b) - overall(a)
+  )[0];
+
+  // Overlap: countries / vibe tags / destinations both partners favored.
+  const overlapHighlights: string[] = [];
+  if (bundles.length >= 2) {
+    const [a, b] = bundles;
+    const aDest = new Set(a.favoritePlans.flatMap((p) => p.route));
+    const sharedDest = Array.from(
+      new Set(b.favoritePlans.flatMap((p) => p.route).filter((d) => aDest.has(d)))
+    );
+    const aVibes = new Set(a.favoritePlans.flatMap((p) => p.vibeTags));
+    const sharedVibes = Array.from(
+      new Set(b.favoritePlans.flatMap((p) => p.vibeTags).filter((v) => aVibes.has(v)))
+    );
+    sharedDest.forEach((d) =>
+      overlapHighlights.push(`Both ${a.displayName} and ${b.displayName} starred plans through ${d}.`)
+    );
+    sharedVibes
+      .slice(0, 3)
+      .forEach((v) => overlapHighlights.push(`Shared vibe both leaned into: ${v}.`));
+  }
+  if (overlapHighlights.length === 0) {
+    overlapHighlights.push(`Built around "${base.title}", the most mutually balanced favorite.`);
+  }
+
+  const proposedPlan: TripPlan = {
+    ...base,
+    id: newId("plan"),
+    title: `Our Trip: ${base.title}`,
+    seed: false,
+    days: base.days.map((d, i) => ({ ...d, id: `${d.id}-syn${i}`, dayNumber: i + 1 })),
+  };
+
+  return {
+    proposedPlan,
+    rationale: `Synthesized from ${pool.length} favorited plan(s) across both partners, anchored on "${base.title}" because it has the smallest gap between Lucas's fit (${base.scores.lucasFit}/10) and his partner's (${base.scores.girlfriendFit}/10).`,
+    overlapHighlights,
+    tradeoffs: buildTradeoffs(
+      [...pool].sort((a, b) => overall(b) - overall(a)),
+      Object.keys(req.feedback ?? {}).length
+    ),
+    source: "fallback",
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
@@ -532,6 +597,8 @@ export function runPlanAssistant(req: LLMPlanRequest): LLMPlanResponse {
       return { type: req.type, revision: revisePlan(req) };
     case "console":
       return { type: req.type, console: runConsole(req) };
+    case "synthesize-itinerary":
+      return { type: req.type, synthesize: synthesizeItineraryMock(req) };
     default:
       return { type: "console", console: { message: "Unknown request type.", contextIncluded: [] } };
   }

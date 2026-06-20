@@ -6,9 +6,11 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 import type {
   AnalyzeFavoritesResult,
   RevisedPlanResult,
+  SynthesizeItineraryResult,
   TripPlan,
 } from "@/lib/types";
 import { callPlanAssistant } from "@/lib/api";
+import { buildCouplesPayloadAction } from "@/app/actions/workspace";
 import { TripHeader } from "@/components/TripHeader";
 import { PlanLibrary } from "@/components/PlanLibrary";
 import { PlanComparisonMatrix } from "@/components/PlanComparisonMatrix";
@@ -17,6 +19,7 @@ import { PreferencePanel } from "@/components/PreferencePanel";
 import { PlanDetailModal } from "@/components/PlanDetailModal";
 import { LLMPlanningConsole } from "@/components/LLMPlanningConsole";
 import { AnalyzeFavoritesModal } from "@/components/AnalyzeFavoritesModal";
+import { SynthesisResultModal } from "@/components/SynthesisResultModal";
 import { ProfileBar, type ProfileBarInfo } from "@/components/ProfileBar";
 
 type Tab = "library" | "compare" | "hybrid" | "preferences";
@@ -40,6 +43,12 @@ export function WorkspaceApp({ profile }: { profile: ProfileBarInfo }) {
   const [analyzeOpen, setAnalyzeOpen] = useState(false);
   const [analyzeLoading, setAnalyzeLoading] = useState(false);
   const [analyzeResult, setAnalyzeResult] = useState<AnalyzeFavoritesResult | null>(null);
+
+  const [synthOpen, setSynthOpen] = useState(false);
+  const [synthLoading, setSynthLoading] = useState(false);
+  const [synthResult, setSynthResult] = useState<SynthesizeItineraryResult | null>(null);
+  const [synthError, setSynthError] = useState<string | null>(null);
+  const [synthLineageId, setSynthLineageId] = useState<string | null>(null);
 
   const favoritePlans = useMemo(
     () => ws.favoriteLineages.map((l) => l.activePlan),
@@ -79,6 +88,41 @@ export function WorkspaceApp({ profile }: { profile: ProfileBarInfo }) {
     } finally {
       setAnalyzeLoading(false);
     }
+  };
+
+  const synthesizeForBoth = async () => {
+    if (synthLoading) return;
+    setSynthOpen(true);
+    setSynthLoading(true);
+    setSynthResult(null);
+    setSynthError(null);
+    setSynthLineageId(null);
+    try {
+      // Assemble BOTH partners' favorites + feedback server-side, then ask the
+      // assistant to synthesize one overlap-maximizing itinerary.
+      const payload = await buildCouplesPayloadAction();
+      const res = await callPlanAssistant(payload);
+      const synth = res.synthesize ?? null;
+      if (!synth) {
+        setSynthError("The assistant didn't return an itinerary. Favorite a few plans for each of you, then try again.");
+        return;
+      }
+      // Persist as a new lineage (never overwrites anyone's Original).
+      const lineageId = ws.createLineage(synth.proposedPlan, "ai-revision", synth.rationale.slice(0, 140));
+      setSynthLineageId(lineageId);
+      setSynthResult(synth);
+    } catch (e) {
+      setSynthError(e instanceof Error ? e.message : "Synthesis failed. Please try again.");
+    } finally {
+      setSynthLoading(false);
+    }
+  };
+
+  const openSynthPlan = () => {
+    if (!synthLineageId) return;
+    setSynthOpen(false);
+    setTab("library");
+    setOpenLineageId(synthLineageId);
   };
 
   const saveRevision = (lineageId: string, result: RevisedPlanResult) => {
@@ -146,6 +190,15 @@ export function WorkspaceApp({ profile }: { profile: ProfileBarInfo }) {
               title={favoritePlans.length === 0 ? "Favorite some plans first" : "Analyze favorites"}
             >
               Analyze favorites{favoritePlans.length > 0 ? ` (${favoritePlans.length})` : ""}
+            </button>
+            <button
+              type="button"
+              onClick={synthesizeForBoth}
+              disabled={synthLoading}
+              className="btn btn-primary text-xs disabled:opacity-40"
+              title="Synthesize one itinerary from both partners' favorites"
+            >
+              {synthLoading ? "Synthesizing…" : "Synthesize trip"}
             </button>
             <button type="button" onClick={() => openConsole(openLineageId)} className="btn btn-clay text-xs">
               AI Console
@@ -229,6 +282,15 @@ export function WorkspaceApp({ profile }: { profile: ProfileBarInfo }) {
         result={analyzeResult}
         loading={analyzeLoading}
         onClose={() => setAnalyzeOpen(false)}
+      />
+
+      <SynthesisResultModal
+        open={synthOpen}
+        loading={synthLoading}
+        result={synthResult}
+        error={synthError}
+        onClose={() => setSynthOpen(false)}
+        onOpenPlan={openSynthPlan}
       />
     </main>
   );
