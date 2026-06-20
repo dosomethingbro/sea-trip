@@ -26,24 +26,81 @@ import {
   setNorthStarRow,
   updatePreferenceRow,
 } from "@/storage/remoteTripStore";
-import { DEFAULT_PROFILE_ID } from "@/lib/workspaceConfig";
+import { requireProfileId } from "@/lib/membership";
+import { PROFILE_IDS, PROFILE_LABELS } from "@/lib/workspaceConfig";
 import type {
   DestinationDecisionStatus,
   FeedbackStatus,
+  LLMPlanRequest,
   PlanVersion,
   Preference,
+  ProfileFeedbackBundle,
   ProfileId,
+  TripPlan,
   WorkspaceState,
 } from "@/lib/types";
 
-// Phase 2 swaps this for: read session -> membership -> ProfileId.
+// Phase 2: the acting profile is derived from the session -> membership row.
+// Throws "Unauthorized" if there is no valid session/membership, which gates
+// every mutation and the workspace read below.
 async function currentProfile(): Promise<ProfileId> {
-  return DEFAULT_PROFILE_ID;
+  return requireProfileId();
 }
 
 export async function getWorkspaceStateAction(): Promise<WorkspaceState> {
   const profileId = await currentProfile();
   return loadWorkspaceState(profileId);
+}
+
+// Phase 3: assemble the couples-synthesis payload. Reads BOTH partners'
+// favorites + feedback server-side (the client only ever loads its own
+// profile's data) and resolves each favorited lineage to its active plan.
+// Returns a ready-to-POST LLMPlanRequest; the AI call itself happens in the
+// /api/plan-assistant route so secrets stay server-side either way.
+export async function buildCouplesPayloadAction(): Promise<LLMPlanRequest> {
+  // Gate: must be an authenticated member of the workspace.
+  await currentProfile();
+
+  const bundles: ProfileFeedbackBundle[] = [];
+  let preferences: Preference[] = [];
+  let dateOptionId = "";
+
+  for (const profileId of PROFILE_IDS) {
+    const state = await loadWorkspaceState(profileId);
+    preferences = state.preferences; // workspace-scoped; same for both
+    dateOptionId = state.activeDateOptionId;
+
+    // Resolve this profile's favorited lineages to their active TripPlan.
+    const favoritePlans: TripPlan[] = state.favoriteIds
+      .map((lineageId) => {
+        const activeId = state.activeVersionByLineage[lineageId];
+        const lineageVersions = state.versions.filter((v) => v.lineageId === lineageId);
+        const chosen =
+          lineageVersions.find((v) => v.id === activeId) ??
+          lineageVersions.find((v) => v.kind === "original") ??
+          lineageVersions[0];
+        return chosen?.plan ?? null;
+      })
+      .filter((p): p is TripPlan => Boolean(p));
+
+    bundles.push({
+      profileId,
+      displayName: PROFILE_LABELS[profileId],
+      favoritePlans,
+      feedback: state.feedback,
+    });
+  }
+
+  // Union of both partners' favorites — used by the mock fallback.
+  const allFavorites = bundles.flatMap((b) => b.favoritePlans);
+
+  return {
+    type: "synthesize-itinerary",
+    couplesFeedback: bundles,
+    favoritePlans: allFavorites,
+    preferences,
+    dateOptionId,
+  };
 }
 
 export async function setFeedbackAction(
