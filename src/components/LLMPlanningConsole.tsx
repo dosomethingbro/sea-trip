@@ -27,6 +27,7 @@ export function LLMPlanningConsole({
   feedback,
   dateOptionId,
   onSaveProposed,
+  onActionsTaken,
 }: {
   open: boolean;
   onClose: () => void;
@@ -36,6 +37,9 @@ export function LLMPlanningConsole({
   feedback: Record<string, ActivityFeedback>;
   dateOptionId: string;
   onSaveProposed: (plan: TripPlan, changeSummary: string, targetLineageId: string | null) => void;
+  // Called when the assistant logs decisions server-side, so the workspace can
+  // refetch and reflect the new feedback/destination decisions.
+  onActionsTaken?: () => void;
 }) {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
@@ -68,7 +72,11 @@ export function LLMPlanningConsole({
         feedback,
         dateOptionId,
       });
-      setResult(res.console ?? null);
+      const consoleResult = res.console ?? null;
+      setResult(consoleResult);
+      if (consoleResult?.actionsTaken && consoleResult.actionsTaken.length > 0) {
+        onActionsTaken?.();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
@@ -137,6 +145,20 @@ export function LLMPlanningConsole({
                 <p className="eyebrow mb-1">Assistant</p>
                 <p className="whitespace-pre-line text-sm leading-relaxed text-ink/90">{result.message}</p>
               </div>
+
+              {result.actionsTaken && result.actionsTaken.length > 0 && (
+                <div className="rounded-2xl border border-forest/20 bg-forest/5 p-4">
+                  <p className="eyebrow mb-1 text-forest-600">Logged for you</p>
+                  <ul className="space-y-1 text-sm text-ink/85">
+                    {result.actionsTaken.map((a, i) => (
+                      <li key={i} className="flex gap-2">
+                        <span className="text-forest">✓</span>
+                        <span>{a}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {result.contextIncluded.length > 0 && (
                 <div className="rounded-2xl border border-forest/10 bg-white/50 p-4">
