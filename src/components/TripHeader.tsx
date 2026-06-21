@@ -28,9 +28,14 @@ export function TripHeader({
               favorites.
             </p>
           </div>
-          <button type="button" onClick={onReset} className="btn btn-ghost text-xs">
-            Reset workspace
-          </button>
+          <div className="flex items-center gap-2">
+            <a href="/croatia" className="btn btn-secondary text-xs">
+              Croatia trip →
+            </a>
+            <button type="button" onClick={onReset} className="btn btn-ghost text-xs">
+              Reset workspace
+            </button>
+          </div>
         </div>
 
         <div className="mt-6">
