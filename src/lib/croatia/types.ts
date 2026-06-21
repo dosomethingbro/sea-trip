@@ -33,6 +33,41 @@ export interface ActivitySourceLink {
   url: string;
 }
 
+// The two travelers. Used for per-partner favorites + ratings and the compare
+// matrix. Kept as a const tuple so seed data and UI share one source of truth.
+export const TRAVELERS = ["Lucas", "Tobi"] as const;
+export type Traveler = (typeof TRAVELERS)[number];
+
+// Aggregated, human-readable reviews for an activity (e.g. Google / TripAdvisor).
+export interface ActivityReviews {
+  rating?: number; // out of 5, e.g. 4.6
+  count?: number; // number of reviews
+  source?: string; // "Google", "TripAdvisor", etc.
+}
+
+// Practical detail shown in the expandable card body. All optional — seed
+// logistics may have none, AI/curated picks fill what they can.
+export interface ActivityDetails {
+  area?: string; // neighborhood / area, e.g. "Varoš, Split"
+  address?: string;
+  travelTime?: string; // "10-min walk from the Riva", "1.5-hr boat"
+  bestTime?: string; // "Sunset", "Early morning to beat crowds"
+  seasonNote?: string; // "Runs mid-July weekends; book ahead"
+  priceLevel?: string; // "Free", "€", "€€", "€€€"
+  reviews?: ActivityReviews;
+  bookingUrl?: string;
+  mapUrl?: string;
+}
+
+// One partner's take on an activity: a favorite heart and a 0-5 rating
+// (0 = not rated yet).
+export interface PartnerVote {
+  favorite: boolean;
+  rating: number;
+}
+
+export type ActivityVotes = Partial<Record<Traveler, PartnerVote>>;
+
 export interface CroatiaActivity {
   id: string;
   dayId: string;
@@ -50,6 +85,10 @@ export interface CroatiaActivity {
   tags?: string[];
   // Populated when an activity came from a live AI web-search recommendation.
   sourceLinks?: ActivitySourceLink[];
+  // Rich, practical detail (area, travel time, reviews, price…).
+  details?: ActivityDetails;
+  // Per-partner favorites + ratings, keyed by traveler.
+  votes?: ActivityVotes;
 }
 
 // Days are STATIC seed data (dates, locations, and titles come straight from
@@ -88,7 +127,12 @@ export interface CroatiaState {
 // AI contract (web-search recommendations + swap alternatives)
 // ---------------------------------------------------------------------------
 
-export type RecommendKind = "discover" | "swap";
+// "discover": fresh ideas for the day. "swap": replace one activity.
+// "nearby": more things close to (and around the time of) an anchor activity.
+export type RecommendKind = "discover" | "swap" | "nearby";
+
+// Optional angle to steer the search — e.g. focus on food/restaurants.
+export type RecommendFocus = "food" | "events";
 
 export interface RecommendRequest {
   kind: RecommendKind;
@@ -102,6 +146,14 @@ export interface RecommendRequest {
     slot: DaySlot;
     timeLabel?: string;
   };
+  // For "nearby": the activity we want options close to / around the time of.
+  anchor?: {
+    title: string;
+    area?: string;
+    slot: DaySlot;
+    timeLabel?: string;
+  };
+  focus?: RecommendFocus;
   // Free-form steering from the user ("more food", "off the beaten path").
   note?: string;
 }
@@ -112,11 +164,13 @@ export interface Suggestion {
   category: ActivityCategory;
   slot: DaySlot;
   timeLabel?: string;
-  // Why this fits Lucas + his girlfriend / the day.
+  // Why this fits Lucas + Tobi / the day.
   whyItFits: string;
   // "live" if grounded in a current event/festival/Reddit thread this trip.
   liveSignal?: string;
   sourceLinks?: ActivitySourceLink[];
+  // Practical detail to carry onto the card when added.
+  details?: ActivityDetails;
 }
 
 export interface RecommendResponse {
@@ -126,3 +180,9 @@ export interface RecommendResponse {
   suggestions: Suggestion[];
   sources: ActivitySourceLink[];
 }
+
+// ---------------------------------------------------------------------------
+// Compare / matrix helpers
+// ---------------------------------------------------------------------------
+
+export const DEFAULT_VOTE: PartnerVote = { favorite: false, rating: 0 };

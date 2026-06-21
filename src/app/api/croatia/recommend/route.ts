@@ -66,7 +66,7 @@ const suggestionSchema = z.object({
   summary: z.string(),
 });
 
-const TRAVELER_PROFILE = `The travelers are Lucas and his girlfriend. They like:
+const TRAVELER_PROFILE = `The travelers are Lucas and Tobi (two people traveling together). They like:
 - Authentic local culture and food over polished tourist versions
 - Wandering neighborhoods and eating their way through them
 - Beautiful scenery, swimming, and a mix of culture + nature

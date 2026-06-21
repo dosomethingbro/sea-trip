@@ -4,11 +4,12 @@
 // static; their activities are the initial seed of the mutable per-day lists.
 
 import type { CroatiaActivity, CroatiaDay, CroatiaTrip } from "./types";
+import { TRAVELERS } from "./types";
 
 export const CROATIA_TRIP: Omit<CroatiaTrip, "days"> = {
   title: "Croatia",
   subtitle: "Split · Korčula · Dubrovnik — July 2–11, 2026",
-  travelers: ["Lucas", "Girlfriend"],
+  travelers: [...TRAVELERS],
 };
 
 export const CROATIA_DAYS: CroatiaDay[] = [
@@ -130,10 +131,10 @@ const SEED_BY_DAY: Record<string, SeedActivity[]> = {
     { id: "a-d2-5", slot: "evening", title: "Explore & grab dinner", description: "Wander the Riva and find a first-night dinner.", category: "food", location: "Split", source: "seed" },
   ],
   d3: [
-    { id: "a-d3-1", slot: "all-day", title: "Explore Split", description: "Diocletian's Palace, the old town lanes, and the waterfront at your own pace.", category: "culture", location: "Split", source: "seed" },
+    { id: "a-d3-1", slot: "all-day", title: "Explore Split", description: "Diocletian's Palace, the old town lanes, and the waterfront at your own pace.", category: "culture", location: "Split", source: "seed", details: { area: "Old Town, Split", travelTime: "All walkable from the Riva", bestTime: "Cooler in the morning and late afternoon", priceLevel: "Free", reviews: { rating: 4.7, count: 26000, source: "Google" } } },
   ],
   d4: [
-    { id: "a-d4-1", slot: "morning", timeLabel: "AM", title: "Island hopping / snorkeling — half day", description: "Half-day boat trip out of Split for swimming and snorkeling.", category: "experience", location: "Split", source: "seed" },
+    { id: "a-d4-1", slot: "morning", timeLabel: "AM", title: "Island hopping / snorkeling — half day", description: "Half-day boat trip out of Split for swimming and snorkeling.", category: "experience", location: "Split", source: "seed", details: { area: "Departs Split harbor", travelTime: "~4–5 hr round trip (Blue Lagoon / Šolta)", bestTime: "Morning departure for calm seas", priceLevel: "€€", reviews: { rating: 4.6, count: 3100, source: "GetYourGuide" } } },
     { id: "a-d4-2", slot: "afternoon", timeLabel: "PM", title: "Explore Split", description: "Back in town for the afternoon and evening.", category: "culture", location: "Split", source: "seed" },
   ],
   d5: [
