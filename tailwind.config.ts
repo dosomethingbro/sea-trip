@@ -30,6 +30,14 @@ const config: Config = {
           400: "#d9b94f",
           100: "#f3e9c6",
         },
+        // Adriatic navy — echoes the printed Croatia itinerary headers.
+        adriatic: {
+          DEFAULT: "#1b3a52",
+          700: "#163145",
+          600: "#234a66",
+          500: "#33607f",
+          100: "#d7e2ea",
+        },
         ink: "#2b261f",
         muted: "#6f6655",
       },

@@ -26,6 +26,7 @@ import type {
   TripPlan,
   VersionKind,
 } from "@/lib/types";
+import type { CroatiaActivity } from "@/lib/croatia/types";
 
 // One workspace for now (id = "default"). Small mutable "active state"
 // (which version is shown per lineage + the active date option) lives here so
@@ -111,5 +112,21 @@ export const preferences = pgTable("preferences", {
   category: text("category").$type<PreferenceCategory>().notNull(),
   text: text("text").notNull(),
   weight: integer("weight").notNull().default(3),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ---------------------------------------------------------------------------
+// Croatia trip planner (separate fork). One fixed itinerary whose per-day
+// activities are mutable. Days themselves are static seed data in code, so the
+// only persisted thing is the list of activities (with their ordering).
+// No FK constraints, per Neon stack guidance; scoped by workspace_id.
+// ---------------------------------------------------------------------------
+export const croatiaActivities = pgTable("croatia_activities", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull(),
+  dayId: text("day_id").notNull(),
+  position: integer("position").notNull().default(0),
+  activity: jsonb("activity").$type<CroatiaActivity>().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
